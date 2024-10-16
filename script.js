@@ -24,10 +24,12 @@ pipeNorth.src = 'pipeNorth.png';
 pipeSouth.src = 'pipeSouth.png';
 
 // Variables
-const gap = 0.15;  // Percentage of canvas height
+const gap = 0.15;  // Gap as a percentage of canvas height
 let constant;
 let bX, bY, gravity, birdSize, fgHeight, pipeWidth, pipeHeight;
 let score = 0;
+const pipeGapHeight = 2;  // Minimum size of pipes as a multiple of bird size
+let lastPipeX = canvas.width;  // Tracks the last pipe position
 
 // Audio files
 const fly = new Audio();
@@ -36,13 +38,15 @@ const scor = new Audio();
 fly.src = 'fly.mp3';
 scor.src = 'score.mp3';
 
+// Control
 document.addEventListener('keydown', moveUp);
 
 function moveUp() {
-  bY -= canvas.height * 0.05; // Move up based on canvas height
+  bY -= canvas.height * 0.05;
   fly.play();
 }
 
+// Pipe array and initialize
 const pipe = [];
 pipe[0] = { x: canvas.width, y: 0 };
 
@@ -58,7 +62,7 @@ function updateSizes() {
   constant = pipeHeight + gap * canvas.height;
 }
 
-// Draw images
+// Draw images and handle game logic
 function draw() {
   ctx.drawImage(bg, 0, 0, canvas.width, canvas.height);
 
@@ -68,22 +72,33 @@ function draw() {
     ctx.drawImage(pipeNorth, pipeX, pipeY, pipeWidth, pipeHeight);
     ctx.drawImage(pipeSouth, pipeX, pipeY + constant, pipeWidth, pipeHeight);
 
-    pipe[i].x -= canvas.width * 0.005; // Move pipes based on canvas width
+    pipe[i].x -= canvas.width * 0.005;
 
-    if (pipe[i].x <= canvas.width * 0.5) {
-      pipe.push({
-        x: canvas.width,
-        y: Math.floor(Math.random() * -pipeHeight)
-      });
+    if (pipe[i].x === Math.floor(canvas.width * 0.5)) {
+      let newPipeY = Math.max(
+        Math.floor(Math.random() * -pipeHeight), 
+        -pipeHeight + birdSize * pipeGapHeight
+      );
+
+      if (pipe[i].x < lastPipeX - canvas.width * 0.3) {
+        pipe.push({
+          x: canvas.width,
+          y: newPipeY
+        });
+        lastPipeX = canvas.width;
+      }
     }
 
+    // Collision detection
     if ((bX + birdSize >= pipeX && bX <= pipeX + pipeWidth &&
       (bY <= pipeY + pipeHeight || bY + birdSize >= pipeY + constant)) ||
       bY + birdSize >= canvas.height - fgHeight) {
       location.reload();
     }
 
-    if (pipe[i].x == 5) {
+    // Remove pipes that go out of view and update score
+    if (pipe[i].x + pipeWidth < 0) {
+      pipe.splice(i, 1);
       score++;
       scor.play();
     }
